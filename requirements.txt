@@ -1,0 +1,4 @@
+streamlit
+pandas
+yagmail
+openai>=1.0.0
