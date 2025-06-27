@@ -3,12 +3,15 @@ import pandas as pd
 import yagmail
 import time
 import random
-import openai
+from openai import OpenAI
 
-# --- Constants ---
+# --- Load secrets ---
 gmail_user = st.secrets["gmail_user"]
 gmail_app_password = st.secrets["gmail_app_password"]
 openai_api_key = st.secrets["openai_api_key"]
+
+# --- Set up OpenAI client ---
+client = OpenAI(api_key=openai_api_key)
 
 # --- UI Layout ---
 st.title("📺 YouTube Creator Outreach")
@@ -16,9 +19,7 @@ st.title("📺 YouTube Creator Outreach")
 uploaded_file = st.file_uploader("Upload your YouTube leads CSV", type=["csv"])
 
 # --- Email Generation Function ---
-def generate_email(channel_name, about_us, subscribers, api_key):
-    openai.api_key = api_key
-
+def generate_email(channel_name, about_us, subscribers):
     prompt = f"""
 You're a professional video editor named Aimaan reaching out to YouTube creators.
 
@@ -39,18 +40,18 @@ About Us: {about_us}
 Subscribers: {subscribers}
 """
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}]
     )
 
-    body = response['choices'][0]['message']['content'].strip()
+    body = response.choices[0].message.content.strip()
 
     # Normalize paragraph spacing to exactly 1 break
     paragraphs = [p.strip() for p in body.split("\n") if p.strip()]
     body_clean = "\n\n".join(paragraphs)
 
-    # Original footer (no HTML)
+    # Footer
     footer = """
 Best,
 Aimaan
@@ -82,7 +83,7 @@ if st.button("🚀 Start Sending Emails"):
                 continue
 
             try:
-                email_content = generate_email(channel_name, about_us, subscribers, openai_api_key)
+                email_content = generate_email(channel_name, about_us, subscribers)
                 subject = f"Let's work on something for {channel_name}"
                 yag.send(to=email, subject=subject, contents=[email_content])
                 st.success(f"✅ Sent to {email}")
