@@ -5,6 +5,9 @@ import time
 import random
 from openai import OpenAI
 
+# --- Page Config ---
+st.set_page_config(page_title="Email Outreach App")
+
 # --- Load secrets ---
 gmail_user = st.secrets["gmail_user"]
 gmail_app_password = st.secrets["gmail_app_password"]
