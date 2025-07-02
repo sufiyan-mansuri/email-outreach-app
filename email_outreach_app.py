@@ -3,26 +3,55 @@ import pandas as pd
 import yagmail
 import time
 import random
-from openai import OpenAI
+import openai
 
-# --- Page Config ---
-st.set_page_config(page_title="Email Outreach App")
-
-# --- Load secrets ---
+# --- Constants ---
 gmail_user = st.secrets["gmail_user"]
 gmail_app_password = st.secrets["gmail_app_password"]
 openai_api_key = st.secrets["openai_api_key"]
-
-# --- Set up OpenAI client ---
-client = OpenAI(api_key=openai_api_key)
 
 # --- UI Layout ---
 st.title("📺 YouTube Creator Outreach")
 
 uploaded_file = st.file_uploader("Upload your YouTube leads CSV", type=["csv"])
 
+# --- Subject Line Generation Function ---
+def generate_subject(channel_name, traits, api_key):
+    openai.api_key = api_key
+
+    prompt = f"""
+You are an expert cold email copywriter helping a professional video editor pitch their services to YouTube creators.
+
+Generate 5 catchy and personalized email subject lines for a cold outreach message offering video editing services. These subject lines should be attention-grabbing, natural, and make the recipient want to open the email.
+
+Tone: Friendly, confident, scroll-stopping — not too formal or too casual.  
+Avoid using quotation marks.  
+Keep each subject line under 12 words.  
+Include the variable [channel_name] naturally in each line.  
+Use the provided creator traits to personalize the messaging tone and angle.
+
+Variables:
+- channel_name = {channel_name}
+- traits = {traits}
+
+Output only the 5 subject lines as a list, no explanations.
+"""
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    raw_subjects = response['choices'][0]['message']['content']
+    lines = [line.strip("-•* 1234567890.} ").strip('"').strip("'") for line in raw_subjects.split("\n") if line.strip()]
+    clean_lines = [line.replace("[channel_name]", channel_name) for line in lines if "[channel_name]" in line or channel_name in line]
+    subject = random.choice(clean_lines) if clean_lines else f"Video idea for {channel_name}"
+    return subject
+
 # --- Email Generation Function ---
-def generate_email(channel_name, about_us, subscribers):
+def generate_email(channel_name, about_us, subscribers, api_key):
+    openai.api_key = api_key
+
     prompt = f"""
 You're a professional video editor named Aimaan reaching out to YouTube creators.
 
@@ -43,18 +72,18 @@ About Us: {about_us}
 Subscribers: {subscribers}
 """
 
-    response = client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}]
     )
 
-    body = response.choices[0].message.content.strip()
+    body = response['choices'][0]['message']['content'].strip()
 
     # Normalize paragraph spacing to exactly 1 break
     paragraphs = [p.strip() for p in body.split("\n") if p.strip()]
     body_clean = "\n\n".join(paragraphs)
 
-    # Footer
+    # Original footer (no HTML)
     footer = """
 Best,
 Aimaan
@@ -86,8 +115,9 @@ if st.button("🚀 Start Sending Emails"):
                 continue
 
             try:
-                email_content = generate_email(channel_name, about_us, subscribers)
-                subject = f"Let's work on something for {channel_name}"
+                email_content = generate_email(channel_name, about_us, subscribers, openai_api_key)
+                traits = row.get("Traits") or "creative, passionate, confident, consistent, engaging"
+                subject = generate_subject(channel_name, traits, openai_api_key)
                 yag.send(to=email, subject=subject, contents=[email_content])
                 st.success(f"✅ Sent to {email}")
                 sent_count += 1
