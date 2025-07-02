@@ -53,24 +53,33 @@ def generate_email(channel_name, about_us, subscribers, api_key):
     openai.api_key = api_key
 
     prompt = f"""
-You're a professional video editor named Aimaan reaching out to YouTube creators.
+    You're a professional video editor named Aimaan writing a cold outreach email to a YouTube creator named {channel_name}.
 
-Generate a short, casual outreach email body based on this info. Structure it into exactly 3 paragraphs:
+    Write a long, warm, emotionally intelligent email with this exact structure:
 
-1. Compliment the creator's content based on their description.
-2. Introduce yourself as Aimaan, a video editor with 2B+ views.
-3. Offer to do one free edit, mention your site (aimaanedits.com), and invite collaboration.
+    1. Start with a greeting line: "Hey {channel_name},"
+    2. Leave one blank line after the greeting.
 
-❌ Do NOT include any closing line like "Looking forward..." or "Would be dope to connect."
-❌ Do NOT sign off with your name or use "Best" — leave that for the fixed footer.
+    3. **Paragraph 1**: Connect with the creator using their personality traits. Highlight how those traits show up in their content — especially their energy, tone, and what makes their videos enjoyable to watch. Be detailed and genuine, like a fan who's really tuned into their vibe. Avoid generic praise.
 
-Just return the 3 paragraphs only.
+    4. Leave one blank line.
 
-Details:
-Channel Name: {channel_name}
-About Us: {about_us}
-Subscribers: {subscribers}
-"""
+    5. **Paragraph 2**: Introduce Aimaan as a video editor with over 2 billion views across YouTube. Emphasize that he tailors each edit to match the creator’s unique energy, storytelling pace, and style — never trying to change their voice. Be confident, grounded, and collaborative — like someone who understands the craft and respects creators.
+
+    6. Leave one blank line.
+
+    7. **Paragraph 3**: Offer one free edit — not as a pitch, but as an easy, no-pressure invitation. Describe what the edit could feel like: smoother pacing, tighter storytelling, more polished visuals — without losing the creator's voice. Mention aimaanedits.com where they can check his work. End the paragraph naturally, without pressure or follow-up ask.
+
+    ❌ Do NOT include any closing line like “Thanks”, “Let me know”, “Looking forward”, etc.
+    ❌ Do NOT include any sign-off like “Best” or “Aimaan” — that will be added separately as a footer.
+
+    Only return the greeting and the 3 paragraphs. No markdown, no formatting, no bullet points, and no explanation.
+
+    Variables:
+    - Channel Name: {channel_name}
+    - Traits: {traits}
+    - Subscribers: {subscribers}
+    """
 
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -81,16 +90,13 @@ Subscribers: {subscribers}
 
     # Normalize paragraph spacing to exactly 1 break
     paragraphs = [p.strip() for p in body.split("\n") if p.strip()]
-    body_clean = "\n\n".join(paragraphs)
+    email_body = "<br><br>".join(paragraphs)
 
-    # Original footer (no HTML)
-    footer = """
-Best,
-Aimaan
-<a href="https://www.instagram.com/aimaanedits" target="_blank">Instagram</a>
-"""
+    # Fixed footer (no indentation, no extra spaces)
+    footer = 'Best,<br>Aimaan<br><a href="https://www.instagram.com/aimaanedits" target="_blank">Instagram</a>'
 
-    final_body = body_clean.replace("\n", "<br>") + "<br><br>" + footer
+    # Final email body with exact spacing
+    final_body = f"<html><body>{email_body}<br><br>{footer}</body></html>"
     return final_body
 
 # --- Email Sending ---
@@ -109,6 +115,7 @@ if st.button("🚀 Start Sending Emails"):
             channel_name = row.get("Channel Name") or "there"
             about_us = row.get("About Us") or "a great creator"
             subscribers = row.get("Subscribers") or "unknown"
+            traits = row.get("Traits") or "creative, passionate, confident, consistent, engaging"
 
             if not email or "@" not in str(email):
                 st.warning(f"⚠️ Skipping row {idx} — invalid email.")
