@@ -4,16 +4,16 @@ import yagmail
 import time
 import random
 import openai
+import os
 
 # --- Constants ---
-gmail_user = st.secrets["gmail_user"]
-gmail_app_password = st.secrets["gmail_app_password"]
+gmail_accounts = st.secrets["gmail_accounts"]  # Dictionary with 5 accounts
 openai_api_key = st.secrets["openai_api_key"]
 
 # --- UI Layout ---
-st.title("📺 YouTube Creator Outreach")
+st.title("\U0001F4FA YouTube Creator Outreach")
 
-uploaded_file = st.file_uploader("Upload your YouTube leads CSV", type=["csv"])
+uploaded_file = st.file_uploader("Upload your YouTube leads file", type=["csv", "xlsx", "xls"])
 
 # --- Subject Line Generation Function ---
 def generate_subject(channel_name, traits, api_key):
@@ -43,7 +43,7 @@ Output only the 5 subject lines as a list, no explanations.
     )
 
     raw_subjects = response['choices'][0]['message']['content']
-    lines = [line.strip("-•* 1234567890.} ").strip('"').strip("'") for line in raw_subjects.split("\n") if line.strip()]
+    lines = [line.strip("-•* 1234567890.} \"'") for line in raw_subjects.split("\n") if line.strip()]
     clean_lines = [line.replace("[channel_name]", channel_name) for line in lines if "[channel_name]" in line or channel_name in line]
     subject = random.choice(clean_lines) if clean_lines else f"Video idea for {channel_name}"
     return subject
@@ -87,27 +87,29 @@ def generate_email(channel_name, about_us, subscribers, api_key):
     )
 
     body = response['choices'][0]['message']['content'].strip()
-
-    # Normalize paragraph spacing to exactly 1 break
     paragraphs = [p.strip() for p in body.split("\n") if p.strip()]
     email_body = "<br><br>".join(paragraphs)
 
-    # Fixed footer (no indentation, no extra spaces)
     footer = 'Best,<br>Aimaan<br><a href="https://www.instagram.com/aimaanedits" target="_blank">Instagram</a>'
-
-    # Final email body with exact spacing
     final_body = f"<html><body>{email_body}<br><br>{footer}</body></html>"
     return final_body
 
 # --- Email Sending ---
 if st.button("🚀 Start Sending Emails"):
     if not uploaded_file:
-        st.error("⚠️ Please upload your YouTube leads CSV.")
+        st.error("⚠️ Please upload your YouTube leads file.")
         st.stop()
 
     try:
-        df = pd.read_csv(uploaded_file)
-        yag = yagmail.SMTP(gmail_user, gmail_app_password)
+        file_ext = os.path.splitext(uploaded_file.name)[1]
+        if file_ext == ".csv":
+            df = pd.read_csv(uploaded_file)
+        elif file_ext in [".xlsx", ".xls"]:
+            df = pd.read_excel(uploaded_file)
+        else:
+            st.error("Unsupported file type.")
+            st.stop()
+
         sent_count = 0
 
         for idx, row in df.iterrows():
@@ -118,15 +120,21 @@ if st.button("🚀 Start Sending Emails"):
             traits = row.get("Traits") or "creative, passionate, confident, consistent, engaging"
 
             if not email or "@" not in str(email):
-                st.warning(f"⚠️ Skipping row {idx} — invalid email.")
+                st.warning(f"⚠️ Skipping row {idx + 2} — invalid email.")
                 continue
 
+            account_index = (idx // 20) + 1
+            email_key = f"email{account_index}"
+            pass_key = f"pass{account_index}"
+            sender_email = gmail_accounts[email_key]
+            sender_password = gmail_accounts[pass_key]
+
             try:
+                yag = yagmail.SMTP(sender_email, sender_password)
                 email_content = generate_email(channel_name, about_us, subscribers, openai_api_key)
-                traits = row.get("Traits") or "creative, passionate, confident, consistent, engaging"
                 subject = generate_subject(channel_name, traits, openai_api_key)
                 yag.send(to=email, subject=subject, contents=[email_content])
-                st.success(f"✅ Sent to {email}")
+                st.success(f"✅ Sent to {email} using {sender_email}")
                 sent_count += 1
                 time.sleep(random.randint(40, 90))
 
