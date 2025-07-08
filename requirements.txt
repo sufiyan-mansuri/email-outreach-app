@@ -2,3 +2,4 @@ streamlit
 pandas
 yagmail
 openai==0.28
+openpyxl
