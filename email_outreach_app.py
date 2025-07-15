@@ -6,14 +6,25 @@ import random
 import openai
 import os
 
-# --- Constants ---
-gmail_accounts = st.secrets["gmail_accounts"]  # Dictionary with 5 accounts
+# --- UI Layout ---
+st.set_page_config(page_title="YouTube Email Outreach", layout="centered")
+st.markdown("<h1 style='text-align: center;'>📬 YouTube Creator Outreach Tool</h1>", unsafe_allow_html=True)
+st.markdown("### 1. Choose your profile")
+
+# --- Profile Selection ---
+profile = st.selectbox("Select Profile", ["Select Profile", "Sufiyan", "Ayushi"])
+
+# --- Exit early if no profile selected ---
+if profile == "Select Profile":
+    st.warning("⚠️ Please select a profile to continue.")
+    st.stop()
+
+# --- Load Secrets for Profile ---
+gmail_accounts = st.secrets["profiles"][profile.lower()]
 openai_api_key = st.secrets["openai_api_key"]
 
-# --- UI Layout ---
-st.title("\U0001F4FA YouTube Creator Outreach")
-
-uploaded_file = st.file_uploader("Upload your YouTube leads file", type=["csv", "xlsx", "xls"])
+st.markdown("### 2. Upload your YouTube Leads file (CSV or Excel)")
+uploaded_file = st.file_uploader(" ", type=["csv", "xlsx", "xls"])
 
 # --- Subject Line Generation Function ---
 def generate_subject(channel_name, traits, api_key):
