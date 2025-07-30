@@ -147,7 +147,11 @@ if st.button("🚀 Start Sending Emails"):
                 yag.send(to=email, subject=subject, contents=[email_content])
                 st.success(f"✅ Sent to {email} using {sender_email}")
                 sent_count += 1
-                time.sleep(random.randint(40, 90))
+                delay_seconds = random.randint(40, 90)
+                progress = st.progress(0)
+                for second in range(delay_seconds):
+                    time.sleep(1)
+                    progress.progress((second + 1) / delay_seconds)
 
             except Exception as e:
                 st.error(f"❌ Failed to send to {email}: {e}")
