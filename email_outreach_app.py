@@ -134,7 +134,7 @@ if st.button("🚀 Start Sending Emails"):
                 st.warning(f"⚠️ Skipping row {idx + 2} — invalid email.")
                 continue
 
-            account_index = (idx // 20) + 1
+            account_index = (idx // 10) + 1
             email_key = f"email{account_index}"
             pass_key = f"pass{account_index}"
             sender_email = gmail_accounts[email_key]
