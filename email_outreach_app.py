@@ -137,7 +137,7 @@ if st.button("🚀 Start Sending Emails"):
             account_index = (idx // 10) + 1
 
             # Stop if all 5 accounts have been used
-            if acc_index > 5:
+            if account_index > 5:
                 st.warning("Reached maximum limit of 5 accounts (50 emails).")
                 break
 
